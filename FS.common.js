@@ -216,6 +216,10 @@ var RNFS = {
     });
   },
 
+  md5(filepath: string): Promise<string> {
+    return RNFSManager.md5(filepath);
+  },
+
   writeFile(filepath: string, contents: string, encodingOrOptions?: any): Promise<void> {
     var b64;
 

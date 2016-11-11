@@ -12,6 +12,7 @@
 #import "Downloader.h"
 #import "Uploader.h"
 #import "RCTEventDispatcher.h"
+#import <CommonCrypto/CommonDigest.h>
 
 @interface RNFSManager()
 
@@ -213,6 +214,41 @@ RCT_EXPORT_METHOD(readFile:(NSString *)filepath
   NSString *base64Content = [content base64EncodedStringWithOptions:NSDataBase64EncodingEndLineWithLineFeed];
 
   resolve(base64Content);
+}
+
+RCT_EXPORT_METHOD(md5:(NSString *)filepath
+                  resolver:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+{
+  BOOL fileExists = [[NSFileManager defaultManager] fileExistsAtPath:filepath];
+
+  if (!fileExists) {
+    return reject(@"ENOENT", [NSString stringWithFormat:@"ENOENT: no such file or directory, open '%@'", filepath], nil);
+  }
+
+  NSError *error = nil;
+
+  NSDictionary *attributes = [[NSFileManager defaultManager] attributesOfItemAtPath:filepath error:&error];
+
+  if (error) {
+    return [self reject:reject withError:error];
+  }
+
+  if ([attributes objectForKey:NSFileType] == NSFileTypeDirectory) {
+    return reject(@"EISDIR", @"EISDIR: illegal operation on a directory, read", nil);
+  }
+
+  NSData *content = [[NSFileManager defaultManager] contentsAtPath:filepath];
+
+  unsigned char md5Buffer[CC_MD5_DIGEST_LENGTH];
+
+  CC_MD5(content.bytes, (CC_LONG)content.length, md5Buffer);
+
+  NSMutableString *output = [NSMutableString stringWithCapacity:CC_MD5_DIGEST_LENGTH * 2];
+  for(int i = 0; i < CC_MD5_DIGEST_LENGTH; i++)
+    [output appendFormat:@"%02x",md5Buffer[i]];
+
+  resolve(output);
 }
 
 RCT_EXPORT_METHOD(moveFile:(NSString *)filepath

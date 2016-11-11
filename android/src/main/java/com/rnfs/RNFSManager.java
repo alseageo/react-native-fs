@@ -18,6 +18,8 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.net.URL;
 
+import java.security.MessageDigest;
+
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
@@ -118,6 +120,42 @@ public class RNFSManager extends ReactContextBaseJavaModule {
       String base64Content = Base64.encodeToString(buffer, Base64.NO_WRAP);
 
       promise.resolve(base64Content);
+    } catch (Exception ex) {
+      ex.printStackTrace();
+      reject(promise, filepath, ex);
+    }
+  }
+
+  @ReactMethod
+  public void md5(String filepath, Promise promise) {
+    try {
+      File file = new File(filepath);
+
+      if (file.isDirectory()) {
+        rejectFileIsDirectory(promise);
+        return;
+      }
+
+      if (!file.exists()) {
+        rejectFileNotFound(promise, filepath);
+        return;
+      }
+
+      MessageDigest md = MessageDigest.getInstance("MD5");
+
+      FileInputStream inputStream = new FileInputStream(filepath);
+      byte[] buffer = new byte[(int)file.length()];
+
+      int read;
+      while ((read = inputStream.read(buffer)) != -1) {
+        md.update(buffer, 0, read);
+      }
+
+      StringBuilder hexString = new StringBuilder();
+      for (byte digestByte : md.digest())
+        hexString.append(String.format("%02x", digestByte));
+
+      promise.resolve(hexString.toString());
     } catch (Exception ex) {
       ex.printStackTrace();
       reject(promise, filepath, ex);
